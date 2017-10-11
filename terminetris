@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# Constants
+w=$(tput cols)
+h=$(tput lines)
+
+# Functions
+function backLines() {
+	tput cuu ${h}
+}
+
+function drawBlank() {
+	backLines
+	for (( c=1; c<=$w; c++ ))
+	do
+		blanker+=" "
+	done
+	echo -en "\r$blanker"
+	for (( i=1; i<=$h; i++ ))
+	do
+		echo -en "$blanker"
+	done
+}
+
+function draw() {
+	i=1
+	echo -en '\r== Starting Line Here =='
+	for (( i=1; i<$h; i++ )); do
+		echo -en "\n==== line $i ===="
+	done
+}
+
+function redraw() {
+	backLines
+	draw
+}
+
+# Input loop
+draw
+while true; do
+read -rsn1 input1
+if [ "$input1" = "q" ]; then
+	drawBlank
+	backLines
+	echo -e "\nTerminetris (c) 2017 Adam Miller\n"
+	exit
+fi
+if [ "$input1" = $'\e' ]; then
+	read -rsn1 -t 0.0001 input2
+	read -rsn1 -t 0.0001 input3
+	read -rsn1 -t 0.0001 input4
+	if [ "$input3" = "A" ]; then
+	    input1="UP"
+	fi
+	if [ "$input3" = "B" ]; then
+	    input1="DOWN"
+	fi
+	if [ "$input3" = "C" ]; then
+	    input1="RIGHT"
+	fi
+	if [ "$input3" = "D" ]; then
+	    input1="LEFT"
+	fi
+fi
+redraw
+done
