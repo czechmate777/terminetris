@@ -1,8 +1,12 @@
 #!/bin/bash
 
-# Constants
+# Constants/Variables
 w=$(tput cols)
 h=$(tput lines)
+for (( g=0; g<$w*$h; g++)); do
+	grid[$g]=0
+done
+grid[300]=1
 
 # Functions
 function backLines() {
@@ -23,10 +27,14 @@ function drawBlank() {
 }
 
 function draw() {
-	i=1
-	echo -en '\r== Starting Line Here =='
-	for (( i=1; i<$h; i++ )); do
-		echo -en "\n==== line $i ===="
+	echo -en '\r'
+	for g in ${grid[@]}; do
+		if [[ "$g" = "0" ]]; then
+			echo -n " "
+		fi
+		if [[ "$g" = "1" ]]; then
+			echo -n "="
+		fi
 	done
 }
 
@@ -44,6 +52,9 @@ if [ "$input1" = "q" ]; then
 	backLines
 	echo -e "\nTerminetris (c) 2017 Adam Miller\n"
 	exit
+fi
+if [ "$input1" = "a" ]; then
+	grid[(($RANDOM % ${#grid[@]}))]=1
 fi
 if [ "$input1" = $'\e' ]; then
 	read -rsn1 -t 0.0001 input2
