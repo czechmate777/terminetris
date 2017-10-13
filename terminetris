@@ -1,19 +1,23 @@
 #!/bin/bash
 
 # Constants/Variables
+frameDelay=0.5
+animatePid=""
 w=$(tput cols)
 h=$(tput lines)
 for (( g=0; g<$w*$h; g++)); do
 	grid[$g]=0
 done
-grid[300]=1
+temp=$(<startingGrid)
+grid=(${temp/// })
+echo ${grid[@]} >/dev/shm/grid
 
 # Functions
-function backLines() {
+function backLines {
 	tput cuu ${h}
 }
 
-function drawBlank() {
+function drawBlank {
 	backLines
 	for (( c=1; c<=$w; c++ ))
 	do
@@ -26,35 +30,69 @@ function drawBlank() {
 	done
 }
 
-function draw() {
+function draw {
 	echo -en '\r'
+	temp=$(</dev/shm/grid)
+	grid=(${temp/// })
 	for g in ${grid[@]}; do
 		if [[ "$g" = "0" ]]; then
 			echo -n " "
 		fi
-		if [[ "$g" = "1" ]]; then
+		if [[ "$g" > "0" ]]; then
 			echo -n "="
 		fi
 	done
 }
 
-function redraw() {
+function redraw {
 	backLines
 	draw
 }
 
-# Input loop
+# Animate loop
+function step {
+	temp=$(</dev/shm/grid)
+	grid=(${temp/// })
+	for (( i = $h*$w-1; i >= 0; i-- )); do
+		# Acitve Blocks
+		if [ ${grid[i]} == 2 ]; then
+			if [ "${grid[i+w]}" == "0" ]; then
+				grid[i+w]=2
+				grid[i]=0
+			else
+				grid[i]=1
+			fi
+		fi
+	done
+	echo ${grid[@]} >/dev/shm/grid
+}
+function animate {
+	while true; do
+		step
+		redraw
+		sleep $frameDelay
+	done
+}
+
 draw
+animate &
+animatePid=$!
+
+# Input loop
 while true; do
 read -rsn1 input1
 if [ "$input1" = "q" ]; then
+	kill $animatePid
 	drawBlank
 	backLines
 	echo -e "\nTerminetris (c) 2017 Adam Miller\n"
 	exit
 fi
 if [ "$input1" = "a" ]; then
-	grid[(($RANDOM % ${#grid[@]}))]=1
+	temp=$(</dev/shm/grid)
+	grid=(${temp/// })
+	grid[(($RANDOM % ${#grid[@]}))]=2
+	echo ${grid[@]} >/dev/shm/grid
 fi
 if [ "$input1" = $'\e' ]; then
 	read -rsn1 -t 0.0001 input2
@@ -64,7 +102,7 @@ if [ "$input1" = $'\e' ]; then
 	    input1="UP"
 	fi
 	if [ "$input3" = "B" ]; then
-	    input1="DOWN"
+	    step
 	fi
 	if [ "$input3" = "C" ]; then
 	    input1="RIGHT"
