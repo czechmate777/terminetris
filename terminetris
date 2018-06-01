@@ -49,6 +49,32 @@ function redraw {
 	draw
 }
 
+function move {
+	allok=true
+	temp=$(</dev/shm/grid)
+	grid=(${temp/// })
+	movers=()
+	for (( i = $h*$w-1; i >= 0; i-- )); do
+		if [ ${grid[i]} == 2 ]; then
+			pos=$((i % w))
+			ppos=$(($pos+$1))
+			if [[ ${grid[$(($i+$1))]} != 0 ]] || [[ $ppos < 0 ]] || [[ $ppos > $w-1 ]]; then
+				i=-1
+				allok=false
+			else
+				movers+=("$i")
+			fi
+		fi
+	done
+	if [[ allok ]]; then
+		for (( i = 0; i < ${#movers[@]}; i++ )); do
+			grid[$((${movers[$i]}+$1))]=2
+			grid[${movers[$i]}]=0
+		done
+	fi
+	echo ${grid[@]} >/dev/shm/grid
+}
+
 # Animate loop
 function step {
 	temp=$(</dev/shm/grid)
@@ -61,6 +87,7 @@ function step {
 				grid[i]=0
 			else
 				grid[i]=1
+				grid[(($RANDOM % $w-1))]=2
 			fi
 		fi
 	done
@@ -88,12 +115,12 @@ if [ "$input1" = "q" ]; then
 	echo -e "\nTerminetris (c) 2017 Adam Miller\n"
 	exit
 fi
-if [ "$input1" = "a" ]; then
-	temp=$(</dev/shm/grid)
-	grid=(${temp/// })
-	grid[(($RANDOM % ${#grid[@]}))]=2
-	echo ${grid[@]} >/dev/shm/grid
-fi
+# if [ "$input1" = "a" ]; then
+# 	temp=$(</dev/shm/grid)
+# 	grid=(${temp/// })
+# 	grid[(($RANDOM % ${#grid[@]}))]=2
+# 	echo ${grid[@]} >/dev/shm/grid
+# fi
 if [ "$input1" = $'\e' ]; then
 	read -rsn1 -t 0.0001 input2
 	read -rsn1 -t 0.0001 input3
@@ -105,10 +132,12 @@ if [ "$input1" = $'\e' ]; then
 	    step
 	fi
 	if [ "$input3" = "C" ]; then
-	    input1="RIGHT"
+		echo "RIGHT" >> log
+	    move 1
 	fi
 	if [ "$input3" = "D" ]; then
-	    input1="LEFT"
+		echo "LEFT" >> log
+	    move -1
 	fi
 fi
 redraw
